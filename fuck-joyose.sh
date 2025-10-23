@@ -18,7 +18,7 @@
 PKG_ADSOLUTION="com.miui.systemAdSolution" # 智能服务（广告）
 PKG_ANALYTICS="com.miui.analytics" # Analytics
 PKG_JOYOSE="com.xiaomi.joyose" # Joyose
-IS_DEBUG_MODE="0" # 是否处于调试模式
+IS_DEBUG_MODE="1" # 是否处于调试模式
 PERMISSIONS=( # 权限集
     # 验证账户
     "android.permission.AUTHENTICATE_ACCOUNTS"
@@ -78,10 +78,28 @@ PERMISSIONS=( # 权限集
     # 查询所有软件包
     "android.permission.QUERY_ALL_PACKAGES"
 )
+[[ "$IS_DEBUG_MODE" == "1" ]] && PERMISSIONS=( # 权限集
+    # 拥有完全的网络访问权限
+    "android.permission.INTERNET"
+    # 查看网络连接
+    "android.permission.ACCESS_NETWORK_STATE"
+    # 查看WLAN连接
+    "android.permission.ACCESS_WIFI_STATE"
+    # 防止手机休眠
+    "android.permission.WAKE_LOCK"
+    # 连接WLAN网络和断开连接
+    "android.permission.CHANGE_WIFI_STATE"
+    "miui.packageinstaller.permission.ACTION_INFO"
+)
 # 杂项配置，请勿修改
-LOG_DIR="$(cd "$(dirname "$0")" && pwd)" # 日志文件夹
-LOG_FILE="$LOG_DIR/fuck-joyose.log" # 日志文件
-ERR_LOG_FILE="$LOG_DIR/fuck-joyose-err.log" # 错误日志文件
+LOG_DIR="$(cd "$(dirname "$0")" && pwd)/log" # 日志文件夹
+[[ "$IS_DEBUG_MODE" == "1" ]] && LOG_DIR="/storage/emulated/0/101o5_自用工具/fuck-joyose/log"
+CURRENT_DATE=$(date +"%Y%m%d-%H%M%S")
+# LOG_FILE="$LOG_DIR/fuck-joyose-log_${CURRENT_DATE}.log" # 日志文件
+# ERR_LOG_FILE="$LOG_DIR/fuck-joyose-log-err_${CURRENT_DATE}.log" # 错误日志文件
+LOG_FILE_STDOUT="$LOG_DIR/fuck-joyose_${CURRENT_DATE}_stdout.log" # 标准输出日志文件
+LOG_FILE_STDERR="$LOG_DIR/fuck-joyose_${CURRENT_DATE}_stderr.log" # 标准错误日志文件
+LOG_FILE_FULL="$LOG_DIR/fuck-joyose_${CURRENT_DATE}_full.log" # 完整日志文件
 
 
 
@@ -101,7 +119,7 @@ if ls "/storage/emulated/0/Android/data/" >/dev/null 2>&1 && ! $(pkg show termux
 elif $(pkg show termux-am >/dev/null 2>&1); then
     echo "【访问普通环境，进入第零阶段——调用rish】"
     # 调用rish，在ADB环境中执行第一阶段
-    until rish -c "bash '$(cd "$(dirname "$0")" && pwd)/$(basename "$0")' '$1'"; do
+    until rish -c "sh '$(cd "$(dirname "$0")" && pwd)/$(basename "$0")' '$1'"; do
         echo "⚠️貌似无法连接到Shizuku，重试中..."
         # echo "⚠️请确保Shizuku服务及APP均处于运行状态。"
         sleep 1
@@ -256,7 +274,7 @@ function handle_user() {
     echo ""
     echo ""
     echo "处理用户 $user ..."
-    {
+    # {
         uninstall_updates "$PKG_ADSOLUTION"        && { num_ok=$(expr $num_ok + 1); echo "✅"; } || { num_err=$(expr $num_err + 1); echo "❌"; }
         uninstall_updates "$PKG_ANALYTICS"        && { num_ok=$(expr $num_ok + 1); echo "✅"; } || { num_err=$(expr $num_err + 1); echo "❌"; }
         # uninstall_updates "$PKG_JOYOSE"        && { num_ok=$(expr $num_ok + 1); echo "✅"; } || { num_err=$(expr $num_err + 1); echo "❌"; }
@@ -278,7 +296,7 @@ function handle_user() {
         uninstall "$user" "$PKG_ADSOLUTION"        && { num_ok=$(expr $num_ok + 1); echo "✅"; } || { num_err=$(expr $num_err + 1); echo "❌"; }
         uninstall "$user" "$PKG_ANALYTICS"        && { num_ok=$(expr $num_ok + 1); echo "✅"; } || { num_err=$(expr $num_err + 1); echo "❌"; }
         [[ "$retainJoyose" == "0" ]] && { uninstall "$user" "$PKG_JOYOSE"        && { num_ok=$(expr $num_ok + 1); echo "✅"; } || { num_err=$(expr $num_err + 1); echo "❌"; }; } || echo "对用户 $user 跳过卸载 Joyose。"
-    } 2>"$ERR_LOG_FILE"
+    # } 2>"$ERR_LOG_FILE"
     echo "用户 $user 所有操作全部完成。以下是统计信息："
     echo "$num_ok 成功 / $num_err 失败。"
     echo ""
@@ -314,15 +332,21 @@ echo "################################"
 
 
 echo ""
+mkdir -p "$LOG_DIR"
+echo "" > "$LOG_FILE_STDOUT"
+# echo "" > "$LOG_FILE_STDERR"
+# echo "" > "$LOG_FILE_FULL"
 # 清理杂鱼：主用户保留Joyose（因为SIM卡密码存在里面），其余用户下全部清理掉
 # 主用户
-handle_user "0" "1"
+# handle_user "0" "1" > >(tee -a "$LOG_FILE_STDOUT" >> "$LOG_FILE_FULL") 2> >(tee -a "$LOG_FILE_STDERR" >> "$LOG_FILE_FULL")
+handle_user "0" "1" 2>/dev/null | tee -a "$LOG_FILE_STDOUT"
+[[ "$IS_DEBUG_MODE" == "1" ]] && echo "调试模式，跳过其他用户的处理..." && echo "【第一阶段结束】" && exit
 # 分身用户
-handle_user "10" "0"
+handle_user "10" "0" 2>/dev/null | tee -a "$LOG_FILE_STDOUT"
 # 自建用户1
-handle_user "11" "0"
+handle_user "11" "0" 2>/dev/null | tee -a "$LOG_FILE_STDOUT"
 # 双开用户
-handle_user "999" "0"
+handle_user "999" "0" 2>/dev/null | tee -a "$LOG_FILE_STDOUT"
 
 
 echo ""
