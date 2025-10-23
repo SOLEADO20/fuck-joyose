@@ -1,0 +1,16 @@
+# 主用户
+adb shell pm uninstall --user 0 com.miui.analytics
+adb shell pm uninstall --user 0 com.miui.systemAdSolution
+#### adb shell pm uninstall --user 0 com.xiaomi.joyose
+# 分身用户
+adb shell pm uninstall --user 10 com.miui.analytics
+adb shell pm uninstall --user 10 com.miui.systemAdSolution
+adb shell pm uninstall --user 10 com.xiaomi.joyose
+# 自建用户1
+adb shell pm uninstall --user 11 com.miui.analytics
+adb shell pm uninstall --user 11 com.miui.systemAdSolution
+adb shell pm uninstall --user 11 com.xiaomi.joyose
+# 双开用户
+adb shell pm uninstall --user 999 com.miui.analytics
+adb shell pm uninstall --user 999 com.miui.systemAdSolution
+adb shell pm uninstall --user 999 com.xiaomi.joyose
